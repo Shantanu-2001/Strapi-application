@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 # Welcome to PearlThoughts Internship Program
 
 We are thrilled to welcome you to the PearlThoughts team! This internship is designed to provide you with valuable hands-on experience, deepen your understanding of technology, and help you hone your skills in a collaborative, innovative environment.
@@ -178,4 +178,4 @@ Feel free to check out the [Strapi GitHub repository](https://github.com/strapi/
 ---
 
 <sub>🤫 Psst! [Strapi is hiring](https://strapi.io/careers).</sub>
->>>>>>> 2809cb3 (Initial commit from Strapi)
+ 2809cb3 (Initial commit from Strapi)
