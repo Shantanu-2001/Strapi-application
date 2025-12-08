@@ -332,6 +332,7 @@ You can directly paste this into your README.md.
 
 ---
 # Docker Networking
+![Alt Text](https://miro.medium.com/v2/resize:fit:1100/format:webp/1*MxxCmxxE1bc1BOXaOAKm-w.jpeg)
 ## **Docker Networking Types (With Examples)**
 
 ## **1. Bridge Network (Default)**
