@@ -37,10 +37,10 @@ data "aws_subnets" "default_subnets" {
 }
 
 # -------------------------
-# EC2 Security Group
+# EC2 Security Group (Shantanu)
 # -------------------------
 resource "aws_security_group" "strapi_sg" {
-  name        = "strapi-sg"
+  name        = "strapi-sg-shantanu"
   description = "Allow Strapi and SSH"
   vpc_id      = data.aws_vpc.default.id
 
@@ -67,10 +67,10 @@ resource "aws_security_group" "strapi_sg" {
 }
 
 # -------------------------
-# RDS Security Group
+# RDS Security Group (Shantanu)
 # -------------------------
 resource "aws_security_group" "strapi_rds_sg" {
-  name        = "strapi-rds-sg"
+  name        = "strapi-rds-sg-shantanu"
   description = "Allow EC2 to access RDS"
   vpc_id      = data.aws_vpc.default.id
 
@@ -83,7 +83,7 @@ resource "aws_security_group" "strapi_rds_sg" {
 }
 
 # -------------------------
-# Allow EC2 → RDS (REQUIRED FIX)
+# Allow EC2 → RDS
 # -------------------------
 resource "aws_security_group_rule" "allow_ec2_to_rds" {
   type                     = "ingress"
@@ -95,18 +95,18 @@ resource "aws_security_group_rule" "allow_ec2_to_rds" {
 }
 
 # -------------------------
-# RDS Subnet Group
+# RDS Subnet Group (Shantanu)
 # -------------------------
 resource "aws_db_subnet_group" "strapi_db_subnet_group" {
-  name       = "strapi-db-subnet-group"
+  name       = "strapi-db-subnet-group-shantanu"
   subnet_ids = data.aws_subnets.default_subnets.ids
 }
 
 # -------------------------
-# RDS PostgreSQL Instance (no engine_version → AWS auto-selects)
+# RDS PostgreSQL Instance (Shantanu)
 # -------------------------
 resource "aws_db_instance" "strapi_rds" {
-  identifier              = "strapi-db"
+  identifier              = "strapi-db-shantanu"
   allocated_storage       = 20
   engine                  = "postgres"
   instance_class          = "db.t3.micro"
@@ -120,7 +120,7 @@ resource "aws_db_instance" "strapi_rds" {
 }
 
 # -------------------------
-# USER DATA — Install Docker + Run Strapi (SSL FIX APPLIED)
+# USER DATA — Install Docker + Run Strapi
 # -------------------------
 locals {
   user_data = <<-EOF
@@ -140,7 +140,7 @@ locals {
               # Wait for RDS to be ready
               sleep 90
 
-              # Run Strapi container with correct AWS RDS SSL env vars
+              # Run Strapi container with RDS SSL settings
               docker run -d -p 1337:1337 \
                 --name strapi \
                 -e DATABASE_CLIENT=postgres \
@@ -158,7 +158,7 @@ locals {
 }
 
 # -------------------------
-# EC2 INSTANCE
+# EC2 INSTANCE (Shantanu)
 # -------------------------
 resource "aws_instance" "strapi" {
   ami                         = data.aws_ami.ubuntu.id
@@ -170,7 +170,6 @@ resource "aws_instance" "strapi" {
   user_data = local.user_data
 
   tags = {
-    Name = "strapi-ubuntu-ec2"
+    Name = "strapi-ubuntu-ec2-shantanu"
   }
 }
-
