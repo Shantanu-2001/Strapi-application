@@ -12,7 +12,9 @@ provider "aws" {
   region = var.aws_region
 }
 
+# -------------------------
 # Ubuntu 22.04 AMI
+# -------------------------
 data "aws_ami" "ubuntu" {
   most_recent = true
   owners      = ["099720109477"]
@@ -34,13 +36,14 @@ data "aws_subnets" "default_subnets" {
   }
 }
 
-# Security group
+# -------------------------
+# EC2 Security Group
+# -------------------------
 resource "aws_security_group" "strapi_sg" {
   name        = "strapi-sg"
   description = "Allow Strapi and SSH"
   vpc_id      = data.aws_vpc.default.id
 
-  # Strapi port 1337
   ingress {
     from_port   = var.strapi_port
     to_port     = var.strapi_port
@@ -48,7 +51,6 @@ resource "aws_security_group" "strapi_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # SSH
   ingress {
     from_port   = 22
     to_port     = 22
@@ -56,7 +58,6 @@ resource "aws_security_group" "strapi_sg" {
     cidr_blocks = [var.allowed_ssh_cidr]
   }
 
-  # Outbound
   egress {
     from_port   = 0
     to_port     = 0
@@ -65,10 +66,62 @@ resource "aws_security_group" "strapi_sg" {
   }
 }
 
-# ----------------------------------------------------------
-# USER DATA — Install Docker, run PostgreSQL + Strapi
-# ----------------------------------------------------------
+# -------------------------
+# RDS Security Group
+# -------------------------
+resource "aws_security_group" "strapi_rds_sg" {
+  name        = "strapi-rds-sg"
+  description = "Allow EC2 to access RDS"
+  vpc_id      = data.aws_vpc.default.id
 
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+# -------------------------
+# Allow EC2 → RDS (REQUIRED FIX)
+# -------------------------
+resource "aws_security_group_rule" "allow_ec2_to_rds" {
+  type                     = "ingress"
+  from_port                = 5432
+  to_port                  = 5432
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.strapi_rds_sg.id
+  source_security_group_id = aws_security_group.strapi_sg.id
+}
+
+# -------------------------
+# RDS Subnet Group
+# -------------------------
+resource "aws_db_subnet_group" "strapi_db_subnet_group" {
+  name       = "strapi-db-subnet-group"
+  subnet_ids = data.aws_subnets.default_subnets.ids
+}
+
+# -------------------------
+# RDS PostgreSQL Instance (no engine_version → AWS auto-selects)
+# -------------------------
+resource "aws_db_instance" "strapi_rds" {
+  identifier              = "strapi-db"
+  allocated_storage       = 20
+  engine                  = "postgres"
+  instance_class          = "db.t3.micro"
+  username                = "strapi"
+  password                = "strapi123"
+  db_name                 = "strapi_db"
+  skip_final_snapshot     = true
+  publicly_accessible     = false
+  vpc_security_group_ids  = [aws_security_group.strapi_rds_sg.id]
+  db_subnet_group_name    = aws_db_subnet_group.strapi_db_subnet_group.name
+}
+
+# -------------------------
+# USER DATA — Install Docker + Run Strapi (SSL FIX APPLIED)
+# -------------------------
 locals {
   user_data = <<-EOF
               #!/bin/bash
@@ -81,44 +134,37 @@ locals {
 
               usermod -aG docker ubuntu
 
-              # Pull images
-              docker pull postgres:15
+              # Pull Strapi image
               docker pull ${var.docker_image}
 
-              # Run PostgreSQL with correct DB name (strapi_db)
-              docker run -d \
-                --name strapi-postgres \
-                -e POSTGRES_DB=strapi_db \
-                -e POSTGRES_USER=strapi \
-                -e POSTGRES_PASSWORD=strapi123 \
-                -v pgdata:/var/lib/postgresql/data \
-                postgres:15
+              # Wait for RDS to be ready
+              sleep 90
 
-              # Wait for PostgreSQL to initialize
-              sleep 12
-
-              # Run Strapi container
+              # Run Strapi container with correct AWS RDS SSL env vars
               docker run -d -p 1337:1337 \
                 --name strapi \
-                --link strapi-postgres \
                 -e DATABASE_CLIENT=postgres \
-                -e DATABASE_HOST=strapi-postgres \
+                -e DATABASE_HOST=${aws_db_instance.strapi_rds.address} \
                 -e DATABASE_PORT=5432 \
                 -e DATABASE_NAME=strapi_db \
                 -e DATABASE_USERNAME=strapi \
                 -e DATABASE_PASSWORD=strapi123 \
+                -e DATABASE_SSL=true \
+                -e DATABASE_SSL__REJECT_UNAUTHORIZED=false \
                 -e HOST=0.0.0.0 \
                 -e PORT=1337 \
                 ${var.docker_image}
               EOF
 }
 
-# EC2 Instance
+# -------------------------
+# EC2 INSTANCE
+# -------------------------
 resource "aws_instance" "strapi" {
-  ami                    = data.aws_ami.ubuntu.id
-  instance_type          = var.instance_type
-  vpc_security_group_ids = [aws_security_group.strapi_sg.id]
-  key_name               = var.key_name
+  ami                         = data.aws_ami.ubuntu.id
+  instance_type               = var.instance_type
+  vpc_security_group_ids      = [aws_security_group.strapi_sg.id]
+  key_name                    = var.key_name
   associate_public_ip_address = true
 
   user_data = local.user_data

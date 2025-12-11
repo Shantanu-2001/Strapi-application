@@ -7,9 +7,12 @@ export default ({ env }) => ({
       database: env('DATABASE_NAME', 'strapi_db'),
       user: env('DATABASE_USERNAME', 'strapi'),
       password: env('DATABASE_PASSWORD', 'strapi123'),
-      ssl: false,
+      ssl: env.bool('DATABASE_SSL', false)
+        ? {
+            rejectUnauthorized: env.bool('DATABASE_SSL__REJECT_UNAUTHORIZED', false),
+          }
+        : false,
     },
     acquireConnectionTimeout: 60000,
   },
 });
-
