@@ -2,11 +2,6 @@ name: CD - Terraform manual deploy (use existing TF)
 
 on:
   workflow_dispatch:
-    inputs:
-      tf_auto_approve:
-        description: 'Auto approve terraform apply?'
-        required: false
-        default: 'true'
 
 permissions:
   contents: read
@@ -39,13 +34,6 @@ jobs:
         working-directory: ./terraform
         run: terraform plan -input=false
 
-      - name: Terraform apply (auto)
-        if: ${{ github.event.inputs.tf_auto_approve == 'true' }}
+      - name: Terraform apply
         working-directory: ./terraform
         run: terraform apply -input=false -auto-approve
-
-      - name: Terraform apply (manual)
-        if: ${{ github.event.inputs.tf_auto_approve != 'true' }}
-        working-directory: ./terraform
-        run: terraform apply -input=false
-
