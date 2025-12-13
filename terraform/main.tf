@@ -135,7 +135,7 @@ resource "aws_security_group_rule" "allow_ec2_to_rds" {
 # ============================================================
 
 resource "aws_db_subnet_group" "strapi_db_subnet_group" {
-  name       = "strapi-db-subnet-group-shantanu"
+  name       = "strapi-db-subnet-group-shantanu-rana"
   subnet_ids = data.aws_subnets.default_subnets.ids
 }
 
