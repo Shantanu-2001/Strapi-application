@@ -11,6 +11,14 @@ terraform {
 provider "aws" {
   region = var.aws_region
 }
+  backend "s3" {
+    bucket         = "shantanu-terraform-state"
+    key            = "terraform/state"
+    region         = "ap-south-1"
+    dynamodb_table = "terraform-lock-table-shantanu"
+  }
+}
+
 
 # -------------------------
 # Get AWS Account ID
