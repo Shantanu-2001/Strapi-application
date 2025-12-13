@@ -154,7 +154,7 @@ resource "aws_db_instance" "strapi_rds" {
 }
 
 # ============================================================
-# USER DATA
+# USER DATA (UPDATED: ADMIN_JWT_SECRET ADDED)
 # ============================================================
 
 locals {
@@ -184,6 +184,7 @@ locals {
       -e DATABASE_PASSWORD=strapi123 \
       -e DATABASE_SSL=true \
       -e DATABASE_SSL__REJECT_UNAUTHORIZED=false \
+      -e ADMIN_JWT_SECRET=my-super-secret-admin-jwt-123456789 \
       -e HOST=0.0.0.0 \
       -e PORT=1337 \
       ${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com/strapi-repo-shantanu:latest
