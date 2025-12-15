@@ -1,13 +1,10 @@
-name: CD - Terraform manual deploy (use existing TF)
+name: CD - Deploy to ECS Fargate
 
 on:
   workflow_dispatch:
 
-permissions:
-  contents: read
-
 jobs:
-  terraform:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
@@ -16,8 +13,6 @@ jobs:
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: '1.5.0'
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
@@ -26,14 +21,17 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Terraform init
+      # Fetch the latest image URI directly from ECR
+      - name: Get latest image URI from ECR
+        run: |
+          IMAGE_TAG=$(aws ecr describe-images --repository-name ${{ secrets.ECR_REPOSITORY }} --query 'sort_by(imageDetails,& imagePushedAt)[-1].imageTags[0]' --output text)
+          IMAGE_URI="${{ secrets.ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}:$IMAGE_TAG"
+          echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_ENV
+
+      - name: Terraform Init
         working-directory: ./terraform
         run: terraform init -input=false
 
-      - name: Terraform plan
+      - name: Terraform Apply
         working-directory: ./terraform
-        run: terraform plan -input=false
-
-      - name: Terraform apply
-        working-directory: ./terraform
-        run: terraform apply -input=false -auto-approve
+        run: terraform apply -input=false -auto-approve -var="docker_image=$IMAGE_URI"
