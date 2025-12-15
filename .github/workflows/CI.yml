@@ -12,8 +12,6 @@ env:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
-    outputs:
-      image_uri: ${{ steps.set-output.outputs.image_uri_latest }}
 
     steps:
       - name: Checkout repo
@@ -29,6 +27,11 @@ jobs:
       - name: Login to ECR
         uses: aws-actions/amazon-ecr-login@v1
 
+      # ✅ THIS STEP WAS MISSING
+      - name: Set short SHA
+        id: vars
+        run: echo "sha_short=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+
       - name: Build and push image to ECR
         uses: docker/build-push-action@v5
         with:
@@ -38,9 +41,3 @@ jobs:
           tags: |
             ${{ env.ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:${{ steps.vars.outputs.sha_short }}
             ${{ env.ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:latest
-
-      - name: Set outputs
-        id: set-output
-        run: |
-          uri_latest="${{ env.ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:latest"
-          echo "image_uri_latest=${uri_latest}" >> $GITHUB_OUTPUT
